@@ -6,7 +6,6 @@ IMPORTANT: This script will currently not work for multiple layers or multiple f
 
 ## Planned future enhancements
 
-- Ability to adjust individual color channels
 - Ability to click on the preview to remove unwanted colors
 
 ## Installation
@@ -26,7 +25,8 @@ IMPORTANT: This script will currently not work for multiple layers or multiple f
 - Run the palettize script
 - Click `Select file` to browse for a PNG palette file
 - Once the palette has loaded, clicking any swatch will remove it
-- Change the HSV sliders to get the best palette mapping
+- Select the color range to adjust (e.g. "Greens", "Purples" or "Global")
+- Change the HSV sliders to adjust the selected range and get the best palette mapping
 - Once you are ready, click `Convert to indexed mode and apply palette` to do exactly that
 
 ![screenshot](screenshot.png)

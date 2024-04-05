@@ -28,12 +28,39 @@ end
 
 local sourceColors = { Color{ r=33, g=30, b=32 }, Color{ r=85, g=85, b=104 }, Color{ r=160, g=160, b=139 }, Color{ r=233, g=239, b=236 }}
 local previewScale = 2
-local hue = 0
-local saturation = 0
-local lightness = 0
+local adjustGlobal = {h=0, s=0, l=0}
+local adjustR = {h=0, s=0, l=0}
+local adjustY = {h=0, s=0, l=0}
+local adjustG = {h=0, s=0, l=0}
+local adjustC = {h=0, s=0, l=0}
+local adjustB = {h=0, s=0, l=0}
+local adjustP = {h=0, s=0, l=0}
+local adjustType = "global"
 local palette = Palette(#sourceColors)
 for i=1, #sourceColors, 1 do
     palette:setColor(i-1, sourceColors[i])
+end
+
+getActiveAdjust = function(type)
+    if type == nil then
+        type = adjustType
+    end
+    if type == "global" then
+        return adjustGlobal
+    elseif type == "red" then
+        return adjustR
+    elseif type == "yellow" then
+        return adjustY 
+    elseif type == "green" then
+        return adjustG
+    elseif type == "cyan" then
+        return adjustC
+    elseif type == "blue" then
+        return adjustB
+    elseif type == "purple" then
+        return adjustP
+    end
+    return nil
 end
 
 -- Load a palette from a png file
@@ -56,10 +83,34 @@ function lerp(first, second, by)
 end
 
 -- Shift a color by hue, saturation and lightness
-function colorShift(color)
-    local hueShift = hue / 8
-    local satShift = saturation / 100
-    local lightShift = lightness / 200
+function colorShift(color, type)
+    local f = 1
+    local v = getActiveAdjust(type)
+    if type ~= "global" then
+        local h = 0
+        if type == "red" then
+            h = 0
+        elseif type == "yellow" then
+            h = 60
+        elseif type == "green" then
+            h = 120
+        elseif type == "cyan" then
+            h = 180
+        elseif type == "blue" then
+            h = 240
+        elseif type == "purple" then
+            h = 300
+        end
+        local d = 360 - math.abs(color.hslHue - h)
+        if d < 240 then
+            f = 0
+        else
+            f = (d - 240)  / 120
+        end
+    end
+    local hueShift = v.h * f / 8
+    local satShift = v.s * f / 100
+    local lightShift = v.l * f / 200
 
     local newColor = Color(color)
 
@@ -108,7 +159,14 @@ drawPreviewImages = function(context)
     local prevImageB = Image(w, h, ColorMode.RGB)
     for y=0, h-1, 1 do
         for x=0, w-1, 1 do
-            local color = colorShift(Color(image:getPixel(x, y)))
+            local color = Color(image:getPixel(x, y))
+            color = colorShift(color, "global")
+            color = colorShift(color, "red")
+            color = colorShift(color, "yellow")
+            color = colorShift(color, "green")
+            color = colorShift(color, "cyan")
+            color = colorShift(color, "blue")
+            color = colorShift(color, "purple")
             local palColor = matchPalette(color)
             prevImageA:drawPixel(x, y, color)
             prevImageB:drawPixel(x, y, palColor)
@@ -127,7 +185,14 @@ applyPalette = function(ev)
     local finalImage = Image(w, h, ColorMode.RGB)
     for y=0, h-1, 1 do
         for x=0, w-1, 1 do
-            local color = colorShift(Color(image:getPixel(x, y)))
+            local color = Color(image:getPixel(x, y))
+            color = colorShift(color, "global")
+            color = colorShift(color, "red")
+            color = colorShift(color, "yellow")
+            color = colorShift(color, "green")
+            color = colorShift(color, "cyan")
+            color = colorShift(color, "blue")
+            color = colorShift(color, "purple")
             local palColor = matchPalette(color)
             finalImage:drawPixel(x, y, palColor)
         end
@@ -179,13 +244,100 @@ showDialog = function()
             end
         }
     end
+    dlg:radio{ id="adjustTypeAll",
+        label="Adjust",
+        text="Global",
+        hexpand=false,
+        selected=adjustType == "global",
+        onclick=function(ev)
+            adjustType = "global"
+            showDialog()
+            dlg:close()
+        end
+    }
+    dlg:radio{ id="adjustTypeR",
+        text="Reds",
+        hexpand=false,
+        selected=adjustType == "red",
+        onclick=function(ev)
+            adjustType = "red"
+            showDialog()
+            dlg:close()
+        end
+    }
+    dlg:radio{ id="adjustTypeY",
+        text="Yellows",
+        hexpand=false,
+        selected=adjustType == "yellow",
+        onclick=function(ev)
+            adjustType = "yellow"
+            showDialog()
+            dlg:close()
+        end
+    }
+    dlg:radio{ id="adjustTypeG",
+        text="Greens",
+        hexpand=false,
+        selected=adjustType == "green",
+        onclick=function(ev)
+            adjustType = "green"
+            showDialog()
+            dlg:close()
+        end
+    }
+    dlg:radio{ id="adjustTypeC",
+        text="Cyans",
+        hexpand=false,
+        selected=adjustType == "cyan",
+        onclick=function(ev)
+            adjustType = "cyan"
+            showDialog()
+            dlg:close()
+        end
+    }
+    dlg:radio{ id="adjustTypeB",
+        text="Blues",
+        hexpand=false,
+        selected=adjustType == "blue",
+        onclick=function(ev)
+            adjustType = "blue"
+            showDialog()
+            dlg:close()
+        end
+    }
+    dlg:radio{ id="adjustTypeP",
+        text="Purples",
+        hexpand=false,
+        selected=adjustType == "purple",
+        onclick=function(ev)
+            adjustType = "purple"
+            showDialog()
+            dlg:close()
+        end
+    }
+    dlg:radio{ id="adjustTypeReset",
+        text="Reset all",
+        hexpand=false,
+        selected=adjustType == "reset",
+        onclick=function(ev)
+            adjustType = "global"
+            adjustGlobal = {h=0, s=0, l=0}
+            adjustR = {h=0, s=0, l=0}
+            adjustG = {h=0, s=0, l=0}
+            adjustB = {h=0, s=0, l=0}
+            showDialog()
+            dlg:close()
+        end
+    }
+    local adjust = getActiveAdjust()
     dlg:slider{ id="hue",
         label="Hue",
         min=-100,
         max=100,
-        value=hue,
+        value=adjust.h,
         onrelease=function(ev)
-            hue = dlg.data.hue
+            local adjust = getActiveAdjust()
+            adjust.h = dlg.data.hue
             showDialog()
             dlg:close()
         end
@@ -194,9 +346,10 @@ showDialog = function()
         label="Saturation",
         min=-100,
         max=100,
-        value=saturation,
+        value=adjust.s,
         onrelease=function(ev)
-            saturation = dlg.data.sat
+            local adjust = getActiveAdjust()
+            adjust.s = dlg.data.sat
             showDialog()
             dlg:close()
         end
@@ -205,9 +358,10 @@ showDialog = function()
         label="Lightness",
         min=-100,
         max=100,
-        value=lightness,
+        value=adjust.l,
         onrelease=function(ev)
-            lightness = dlg.data.light
+            local adjust = getActiveAdjust()
+            adjust.l = dlg.data.light
             showDialog()
             dlg:close()
         end
