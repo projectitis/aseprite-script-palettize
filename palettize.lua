@@ -27,7 +27,12 @@ if image == nil then
 end
 
 local sourceColors = { Color{ r=33, g=30, b=32 }, Color{ r=85, g=85, b=104 }, Color{ r=160, g=160, b=139 }, Color{ r=233, g=239, b=236 }}
-local previewScale = 2
+local previewScale = math.floor((200 / image.width) + 0.5) -- Preview as close to 200 pix as possible
+if previewScale < 1 then
+    previewScale = 1
+elseif previewScale > 8 then
+    previewScale = 8
+end
 local adjustGlobal = {h=0, s=0, l=0}
 local adjustR = {h=0, s=0, l=0}
 local adjustY = {h=0, s=0, l=0}
@@ -174,30 +179,16 @@ drawPreviewImages = function(context)
     end
     local sw = w * previewScale
     local sh = h * previewScale
+    if context == nil then
+        return prevImageB
+    end
     context:drawImage(prevImageA, 0, 0, w, h, 0, 0, sw, sh)
     context:drawImage(prevImageB, 0, 0, w, h, sw, 0, sw, sh)
 end
 
 -- Apply the palette to the image and convert to indexed mode
 applyPalette = function(ev)
-    local w = image.width
-    local h = image.height
-    local finalImage = Image(w, h, ColorMode.RGB)
-    for y=0, h-1, 1 do
-        for x=0, w-1, 1 do
-            local color = Color(image:getPixel(x, y))
-            color = colorShift(color, "global")
-            color = colorShift(color, "red")
-            color = colorShift(color, "yellow")
-            color = colorShift(color, "green")
-            color = colorShift(color, "cyan")
-            color = colorShift(color, "blue")
-            color = colorShift(color, "purple")
-            local palColor = matchPalette(color)
-            finalImage:drawPixel(x, y, palColor)
-        end
-    end
-    sprite.cels[1].image = finalImage
+    sprite.cels[1].image = drawPreviewImages()
     sprite:setPalette(palette)
     app.command.ChangePixelFormat{ format="indexed", dithering="none" }
     app.refresh()
@@ -371,6 +362,17 @@ showDialog = function()
         height=image.height * previewScale,
         onpaint=function(ev)
             drawPreviewImages(ev.context)
+        end
+    }
+    dlg:combobox{ id="previewScale",
+        label="Preview scale",
+        hexpand=false,
+        option=tostring(previewScale.."x"),
+        options={ "1x", "2x", "3x", "4x", "5x", "6x", "7x", "8x" },
+        onchange=function(ev)
+            previewScale = tonumber(dlg.data.previewScale:sub(1, -2))
+            showDialog()
+            dlg:close()
         end
     }
     dlg:button{ id="apply",
