@@ -184,12 +184,12 @@ drawExclusions = function(context)
     context.strokeWidth = 1
 
     context:beginPath()
-    context.color = Color{ r=255, g=255, b=255 }
+    context.color = app.theme.color.background
     context:roundedRect(Rectangle(0.5,0.5, w-1, h-1), 2)
     context:stroke()
 
     context:beginPath()
-    context.color = Color{ r=0, g=0, b=0 }
+    context.color = app.theme.color.editor_sprite_border
     context:roundedRect(Rectangle(1.5,1.5, w-3,h-3), 2)
     context:stroke()
 
