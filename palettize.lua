@@ -45,6 +45,9 @@ local palette = Palette(#sourceColors)
 for i=1, #sourceColors, 1 do
     palette:setColor(i-1, sourceColors[i])
 end
+local paletteExclusions = {}
+local prevImageA = Image(image.width, image.height, ColorMode.RGB)
+local prevImageB = Image(image.width, image.height, ColorMode.RGB)
 
 getActiveAdjust = function(type)
     if type == nil then
@@ -136,22 +139,91 @@ function colorShift(color, type)
     return newColor
 end
 
--- Find the closest color in the palette
-matchPalette = function(color)
+isExclusion = function(index, color)
+    for j=1, #paletteExclusions, 1 do
+        if paletteExclusions[j].index == index then
+            local exclColor = paletteExclusions[j].color
+            local exclDistance = math.abs(color.red - exclColor.red) + math.abs(color.green - exclColor.green) + math.abs(color.blue - exclColor.blue)
+            if (exclDistance / 765) < paletteExclusions[j].tolerance then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+matchPaletteId = function(color)
     if (color.alpha == 0) then
         return Color{ r=0, g=0, b=0, a=0 }
     end
-    local bestMatch = nil
+    local bestMatch = 0
     local bestDistance = 999999
     for i=1, #sourceColors, 1 do
         local palColor = sourceColors[i]
         local distance = math.abs(color.red - palColor.red) + math.abs(color.green - palColor.green) + math.abs(color.blue - palColor.blue)
         if distance < bestDistance then
-            bestMatch = palColor
-            bestDistance = distance
+            if not isExclusion(i, color) then
+                bestMatch = i
+                bestDistance = distance
+            end
         end
     end
     return bestMatch
+end
+
+-- Find the closest color in the palette
+matchPalette = function(color)
+    return sourceColors[matchPaletteId(color)]
+end
+
+-- Draw the exclusions as pairs of swatches
+drawExclusions = function(context)
+    local w = #paletteExclusions * 24 + 4
+    local h = 16
+    context.antialias = true
+    context.strokeWidth = 1
+
+    context:beginPath()
+    context.color = Color{ r=255, g=255, b=255 }
+    context:roundedRect(Rectangle(0.5,0.5, w-1, h-1), 2)
+    context:stroke()
+
+    context:beginPath()
+    context.color = Color{ r=0, g=0, b=0 }
+    context:roundedRect(Rectangle(1.5,1.5, w-3,h-3), 2)
+    context:stroke()
+
+    local x = 2
+    for i=1, #paletteExclusions, 1 do
+        context.color = paletteExclusions[i].color
+        context:fillRect(x, 2, 24, 12)
+        context.color = sourceColors[paletteExclusions[i].index]
+        context:beginPath()
+        context:moveTo(x, 14)
+        context:lineTo(x + 24, 14)
+        context:lineTo(x + 24, 2)
+        context:fill()
+
+        context.color = Color{ r=0, g=0, b=0 }
+        context.strokeWidth = 3
+        context:beginPath()
+        context:moveTo(x + 9.5, 4.5)
+        context:lineTo(x + 15.5, 10.5)
+        context:moveTo(x + 15.5, 4.5)
+        context:lineTo(x + 9.5, 10.5)
+        context:stroke()
+
+        context.color = Color{ r=255, g=0, b=0 }
+        context.strokeWidth = 1
+        context:beginPath()
+        context:moveTo(x + 9.5, 4.5)
+        context:lineTo(x + 15.5, 10.5)
+        context:moveTo(x + 15.5, 4.5)
+        context:lineTo(x + 9.5, 10.5)
+        context:stroke()
+
+        x = x + 24
+    end
 end
 
 -- Draw the preview images
@@ -160,8 +232,6 @@ end
 drawPreviewImages = function(context)
     local w = image.width
     local h = image.height
-    local prevImageA = Image(w, h, ColorMode.RGB)
-    local prevImageB = Image(w, h, ColorMode.RGB)
     for y=0, h-1, 1 do
         for x=0, w-1, 1 do
             local color = Color(image:getPixel(x, y))
@@ -180,15 +250,53 @@ drawPreviewImages = function(context)
     local sw = w * previewScale
     local sh = h * previewScale
     if context == nil then
-        return prevImageB
+        return
     end
     context:drawImage(prevImageA, 0, 0, w, h, 0, 0, sw, sh)
     context:drawImage(prevImageB, 0, 0, w, h, sw, 0, sw, sh)
 end
 
+-- Add an exclusion when user clicks on the preview canvas
+addExclusionFromPreview = function(context, mx, my)
+    mx = math.floor(mx / previewScale);
+    my = math.floor(my / previewScale);
+    if (mx < image.width) then
+        return false
+    end
+    local exclColor = Color(prevImageA:getPixel(mx - image.width, my))
+    local match = matchPaletteId(exclColor)
+    -- If an exact match exists then exit
+    for i=1, #paletteExclusions, 1 do
+        if paletteExclusions[i].index == match and paletteExclusions[i].color == exclColor then
+            return false
+        end
+    end
+    table.insert(paletteExclusions, {
+        index = match,
+        color = exclColor,
+        tolerance = 0.1
+    })
+    return true
+end
+
+-- Remove an exclusion when user clicks on the exclusions canvas
+removeExclusion = function(context, mx, my)
+    mx = mx - 2
+    my = my - 2
+    if (mx < 0 or mx >= #paletteExclusions * 24) then
+        return false
+    end
+    if (my < 0 or my >= 12) then
+        return false
+    end
+    local index = math.floor(mx / 24) + 1
+    table.remove(paletteExclusions, index)
+    return true
+end
+
 -- Apply the palette to the image and convert to indexed mode
-applyPalette = function(ev)
-    sprite.cels[1].image = drawPreviewImages()
+applyPalette = function()
+    sprite.cels[1].image = prevImageB
     sprite:setPalette(palette)
     app.command.ChangePixelFormat{ format="indexed", dithering="none" }
     app.refresh()
@@ -198,8 +306,8 @@ end
 showDialog = function()
     local dlg = Dialog{ title = "Palettize" }
     dlg:file{ id="src", label="Source Palette",
-        label="Load pallete",
-        title="Select image with palette",
+        label="Pallete",
+        title="Browse for palette file (png)",
         open=true,
         hexpand=false,
         filetypes=".png",
@@ -227,6 +335,12 @@ showDialog = function()
                 for i=1, #sourceColors, 1 do
                     if sourceColors[i] == ev.color then
                         table.remove(sourceColors, i)
+                        for j=1, #paletteExclusions, 1 do
+                            if paletteExclusions[j].index == i then
+                                table.remove(paletteExclusions, j)
+                                break
+                            end
+                        end
                         break
                     end
                 end
@@ -235,6 +349,24 @@ showDialog = function()
             end
         }
     end
+
+    if #paletteExclusions > 0 then
+        dlg:canvas{ id="exclusions",
+        label = "Exclusions",
+        width = #paletteExclusions * 24 + 4,
+        height = 16,
+        onpaint=function(ev)
+            drawExclusions(ev.context)
+        end,
+        onmouseup=function(ev)
+            if removeExclusion(ev.context, ev.x, ev.y) then
+                showDialog()
+                dlg:close()
+            end
+        end
+    }
+    end
+
     dlg:radio{ id="adjustTypeAll",
         label="Adjust",
         text="Global",
@@ -362,6 +494,12 @@ showDialog = function()
         height=image.height * previewScale,
         onpaint=function(ev)
             drawPreviewImages(ev.context)
+        end,
+        onmouseup=function(ev)
+            if addExclusionFromPreview(ev.context, ev.x, ev.y) then
+                showDialog()
+                dlg:close()
+            end
         end
     }
     dlg:combobox{ id="previewScale",
