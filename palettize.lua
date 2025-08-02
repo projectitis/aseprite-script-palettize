@@ -49,6 +49,7 @@ local paletteExclusions = {}
 local prevImageA = Image(image.width, image.height, ColorMode.RGB)
 local prevImageB = Image(image.width, image.height, ColorMode.RGB)
 local showPalette = true
+local swatchPerRow = 32
 
 getActiveAdjust = function(type)
     if type == nil then
@@ -319,7 +320,6 @@ showDialog = function()
         end
     }
     if showPalette then
-        local swatchPerRow = 32
         local paletteRows = math.ceil(#sourceColors / swatchPerRow)
         for i=0, paletteRows-1, 1 do
             local row = {}
@@ -352,8 +352,41 @@ showDialog = function()
                 end
             }
         end
+        if swatchPerRow ~= 16 then
+            dlg:button{ id="narrowPalette",
+                text="Narrow (16)",
+                hexpand=false,
+                onclick=function(ev)
+                    swatchPerRow = 16
+                    showDialog()
+                    dlg:close()
+                end
+            }
+        end
+        if swatchPerRow ~= 32 then
+            dlg:button{ id="mediumPalette",
+                text="Medium (32)",
+                hexpand=false,
+                onclick=function(ev)
+                    swatchPerRow = 32
+                    showDialog()
+                    dlg:close()
+                end
+            }
+        end
+        if swatchPerRow ~= 64 then
+            dlg:button{ id="widePalette",
+                text="Wide (64)",
+                hexpand=false,
+                onclick=function(ev)
+                    swatchPerRow = 64
+                    showDialog()
+                    dlg:close()
+                end
+            }
+        end
         dlg:button{ id="hidePalette",
-            text="Hide palette",
+            text="Hide",
             hexpand=false,
             onclick=function(ev)
                 showPalette = false
