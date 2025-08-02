@@ -48,6 +48,7 @@ end
 local paletteExclusions = {}
 local prevImageA = Image(image.width, image.height, ColorMode.RGB)
 local prevImageB = Image(image.width, image.height, ColorMode.RGB)
+local showPalette = true
 
 getActiveAdjust = function(type)
     if type == nil then
@@ -309,47 +310,68 @@ showDialog = function()
         label="Pallete",
         title="Browse for palette file (png)",
         open=true,
-        hexpand=false,
         filetypes=".png",
         onchange=function(ev)
             loadPalette(dlg.data)
+            showPalette = true
             showDialog()
             dlg:close()
         end
     }
-    local paletteRows = math.ceil(#sourceColors / 16)
-    for i=0, paletteRows-1, 1 do
-        local row = {}
-        for j=1, 16, 1 do
-            local index = i * 16 + j
-            if index <= #sourceColors then
-                table.insert(row, sourceColors[index])
+    if showPalette then
+        local swatchPerRow = 32
+        local paletteRows = math.ceil(#sourceColors / swatchPerRow)
+        for i=0, paletteRows-1, 1 do
+            local row = {}
+            for j=1, swatchPerRow, 1 do
+                local index = i * swatchPerRow + j
+                if index <= #sourceColors then
+                    table.insert(row, sourceColors[index])
+                end
             end
+            dlg:shades{ id="palette"..i,
+                label="",
+                mode="pick",
+                colors=row,
+                hexpand=false,
+                onclick=function(ev)
+                    for i=1, #sourceColors, 1 do
+                        if sourceColors[i] == ev.color then
+                            table.remove(sourceColors, i)
+                            for j=1, #paletteExclusions, 1 do
+                                if paletteExclusions[j].index == i then
+                                    table.remove(paletteExclusions, j)
+                                    break
+                                end
+                            end
+                            break
+                        end
+                    end
+                    showDialog()
+                    dlg:close()
+                end
+            }
         end
-        dlg:shades{ id="palette"..i,
-            label="",
-            mode="pick",
-            colors=row,
+        dlg:button{ id="hidePalette",
+            text="Hide palette",
             hexpand=false,
             onclick=function(ev)
-                for i=1, #sourceColors, 1 do
-                    if sourceColors[i] == ev.color then
-                        table.remove(sourceColors, i)
-                        for j=1, #paletteExclusions, 1 do
-                            if paletteExclusions[j].index == i then
-                                table.remove(paletteExclusions, j)
-                                break
-                            end
-                        end
-                        break
-                    end
-                end
+                showPalette = false
+                showDialog()
+                dlg:close()
+            end
+        }
+    else
+        dlg:button{ id="showPalette",
+            text="Show palette",
+            hexpand=false,
+            onclick=function(ev)
+                showPalette = true
                 showDialog()
                 dlg:close()
             end
         }
     end
-
     if #paletteExclusions > 0 then
         dlg:canvas{ id="exclusions",
         label = "Exclusions",

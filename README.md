@@ -40,3 +40,7 @@ To add an exclusion:
 ## Screenshot of the extension
 
 ![screenshot](screenshot.png)
+
+## Changelog
+
+- **Aug 2025:** Increased palette width. Added hide/show palette.
