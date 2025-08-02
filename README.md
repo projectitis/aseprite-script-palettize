@@ -17,11 +17,13 @@ IMPORTANT: This script will currently not work for multiple layers or multiple f
 
 ## Basic usage
 
-- Load an image to palettize
+- Load the image you want to palettize
 - Run the palettize script
 - Click `Select file` to browse for a PNG palette file
 - Select the color range to adjust (e.g. "Greens", "Purples" or "Global")
 - Change the HSV sliders to adjust the selected range and get the best palette mapping
+- Click any colors in the palette you want to remove
+- Stop specific colors from matching by clicking a pixel in the preview image
 - Once you are ready, click `Convert to indexed mode and apply palette` to apply it to your image
 
 ## Removing unwanted color matches
@@ -43,4 +45,4 @@ To add an exclusion:
 
 ## Changelog
 
-- **Aug 2025:** Increased palette width. Added hide/show palette.
+- **Aug 2025:** Select palette width. Added hide/show palette.
